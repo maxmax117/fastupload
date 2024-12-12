@@ -10,6 +10,7 @@ import { styled } from '@mui/joy/styles';
 import { UploadFile } from './interface';
 import {getUserId } from '../../api/axios';
 import { nanoid } from 'nanoid';
+import { useTranslation } from 'react-i18next';
 
 function createData(
     name: string,
@@ -35,6 +36,7 @@ const MAX_WORKERS_FILE = 3;
 const MAX_WORKERS = 5;
 
 function FastUpload() {
+    const { t } = useTranslation();
     const [progress, setProgress] = useState(0);
     const progressRef = useRef(0);
     const [fileSize, setFileSize] = useState(0)
@@ -298,21 +300,25 @@ function FastUpload() {
         <>
             <Card style={{width: '500px'}}>
                 <Stack direction='column' spacing={1}>
-                    <span style={{textAlign: 'left', fontSize: '14px', marginTop: '-10px'}}>FastUpload <span
-                        style={{fontSize: '10px', fontStyle: 'italic'}}></span></span>
+                    <span style={{textAlign: 'left', fontSize: '14px', marginTop: '-10px'}}>
+                        {t('uploader.title')}
+                    </span>
                     <Card {...getRootProps()} style={{border: `1px dashed ${activeColor}`, height: 50}}>
                         {
                             isDragActive ? (
-                                <span style={{color: '#000'}}>Release the file here to start the uploading
-                                    process.</span>
+                                <span style={{color: '#000'}}>
+                                    {t('uploader.releaseText')}
+                                </span>
                             ) : (
                                 <a href={'#'} style={{fontWeight: 'normal', color: '#000'}} onClick={(event) => {
                                     event.preventDefault();
                                     clear();
                                     handleClick();
-                                }}>Drag & drop a file to here or <span
-                                    style={{fontWeight: 'bold', fontSize: '17px', color: '#4E79DA'}}>CLICK</span> to
-                                    choose a file to upload</a>
+                                }}>
+                                    {t('uploader.dragText')} <span
+                                    style={{fontWeight: 'bold', fontSize: '17px', color: '#4E79DA'}}>
+                                    {t('uploader.clickText')}</span> {t('uploader.chooseFile')}
+                                </a>
                             )
                         }
 
@@ -390,7 +396,7 @@ function FastUpload() {
                         borderRadius: 'inherit'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <span>正在加载文件</span>
+                            <span>{t('uploader.loading')}</span>
                             <span style={{ width: '24px', textAlign: 'left' }} className="loading-dots"></span>
                         </div>
                         <style>

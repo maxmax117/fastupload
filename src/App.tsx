@@ -4,6 +4,26 @@ import viteLogo from '/vite.svg'
 import './App.css'
 import FastUpload from "./components/uploader/FastUpload.tsx";
 import FastUploadPro from './components/uploader/FastUploadPro.tsx';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import enTranslation from './locales/en';
+import zhTranslation from './locales/zh';
+import jaTranslation from './locales/ja';
+
+i18n
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: { translation: enTranslation },
+      zh: { translation: zhTranslation },
+      ja: { translation: jaTranslation }
+    },
+    lng: 'zh', // 默认语言
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false
+    }
+  });
 
 function App() {
   const [count, setCount] = useState(0)
