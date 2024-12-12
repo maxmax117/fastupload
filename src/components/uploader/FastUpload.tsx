@@ -310,21 +310,21 @@ function FastUpload() {
                                     {t('uploader.releaseText')}
                                 </span>
                             ) : (
-                                <a href={'#'} style={{fontWeight: 'normal', color: '#000'}} onClick={(event) => {
+                                <a href={'#'} style={{fontWeight: 'normal', fontSize: '13px',color: '#000'}} onClick={(event) => {
                                     event.preventDefault();
                                     clear();
                                     handleClick();
                                 }}>
                                     {t('uploader.dragText')} <span
-                                    style={{fontWeight: 'bold', fontSize: '17px', color: '#4E79DA'}}>
+                                    style={{fontWeight: 'bold', fontSize: '15px', color: '#4E79DA'}}>
                                     {t('uploader.clickText')}</span> {t('uploader.chooseFile')}
                                 </a>
                             )
                         }
 
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
-                            <label style={{fontSize: '14px', color: fileColor}}>{fileName}</label>
-                            <label style={{fontSize: '11px', color: 'gray'}}>{fileSize == 0 ? '' : fileSize}</label>
+                            <label style={{fontSize: '12px', color: fileColor}}>{fileName}</label>
+                            <label style={{fontSize: '10px', color: 'gray'}}>{fileSize == 0 ? '' : fileSize}</label>
                         </div>
 
                         <form>
