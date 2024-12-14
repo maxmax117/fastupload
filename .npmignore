@@ -1,0 +1,13 @@
+node_modules
+dist
+src
+*.log
+*.ts
+*.tsx
+*.spec.ts
+*.spec.tsx
+*.spec.js
+*.spec.jsx
+*.spec.json
+*.spec.md
+*.spec.html

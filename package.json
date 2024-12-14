@@ -1,11 +1,12 @@
 {
   "name": "fastupload",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc",
+    "build2": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -37,5 +38,26 @@
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
     "worker-plugin": "^5.0.1"
-  }
+  },
+  "description": "an asynchronouse web upload component",
+  "main": "src/components/uploader/FastUpload.tsx",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxmax117/fastupload.git"
+  },
+  "keywords": [
+    "uploader",
+    "upload",
+    "fastupload",
+    "fastuploader"
+  ],
+  "author": "Max Wang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/maxmax117/fastupload/issues"
+  },
+  "homepage": "https://github.com/maxmax117/fastupload#readme"
 }
