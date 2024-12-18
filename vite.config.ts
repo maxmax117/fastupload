@@ -17,7 +17,15 @@ const banner = `/**
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [react(), worker(), dts({
+    plugins: [react(), worker({
+        plugins: [],
+        rollupOptions: {
+            output: {
+                format: 'es',
+                entryFileNames: 'UploadWorker.js'
+            }
+        }
+    }), dts({
         insertTypesEntry: true,
         include: ['src/components/uploader/FastUpload.tsx', 
             'src/index.ts',
@@ -28,7 +36,7 @@ export default defineConfig({
         lib: {
             entry: resolve(__dirname, 'src/components/uploader/FastUpload.tsx'),
             name: 'fastupload',
-            fileName: (format) => `fastupload.${format}.js`,
+            fileName: (format) => `FastUpload.${format}.js`,
             formats: ['es', 'umd']
         },
         rollupOptions: {
@@ -43,27 +51,22 @@ export default defineConfig({
                     '@emotion/react': 'EmotionReact'
                 },
                 assetFileNames: (assetInfo) => {
-                    if (assetInfo.name === 'UploadWorker.js') {
-                        return 'assets/[name][extname]';
+                    if (assetInfo.name?.includes('locales/')) {
+                        return assetInfo.name;
                     }
                     return 'assets/[name]-[hash][extname]';
-                }
+                },
+                entryFileNames: (chunkInfo) => {
+                    return chunkInfo.isEntry ? 'FastUpload.[format].js' : 'assets/[name]-[hash].js';
+                },
+                preserveModules: false,
+                inlineDynamicImports: false
             }
         },
-        assetsDir: 'assets',
+        copyPublicDir: true,
+        assetsDir: '.',
         emptyOutDir: true,
-        sourcemap: true,
-        worker: {
-            format: 'es',
-            plugins: [],
-            rollupOptions: {
-                output: {
-                    format: 'es',
-                    entryFileNames: 'assets/[name].js',
-                    chunkFileNames: 'assets/[name].js'
-                }
-            }
-        }
+        sourcemap: true
     }
 })
 
