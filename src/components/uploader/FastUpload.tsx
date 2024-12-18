@@ -2,7 +2,7 @@ import Card from '@mui/joy/Card';
 import Divider from '@mui/joy/Divider';
 import {useDropzone} from 'react-dropzone';
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Grid, IconButton, LinearProgress, Sheet, Stack} from "@mui/joy";
+import {Grid, IconButton, LinearProgress, Sheet, Stack, Typography} from "@mui/joy";
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -11,6 +11,11 @@ import { UploadFile } from './interface';
 import {getUserId } from '../../api/axios';
 import { nanoid } from 'nanoid';
 import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import enTranslation from '../../locales/en';
+import zhTranslation from '../../locales/zh';
+import jaTranslation from '../../locales/ja';
 
 function createData(
     name: string,
@@ -36,7 +41,7 @@ const MAX_WORKERS_FILE = 3;
 const MAX_WORKERS = 5;
 
 function FastUpload() {
-    const { t } = useTranslation();
+    const [t, setT] = useState(() => (key: string) => key);
     const [progress, setProgress] = useState(0);
     const progressRef = useRef(0);
     const [fileSize, setFileSize] = useState(0)
@@ -52,6 +57,25 @@ function FastUpload() {
     const [isLoading, setIsLoading] = useState(false);
     const isCancelled = useRef(false);
     useEffect(() => {
+        console.log('FastUpload useEffect');
+        i18n
+            .use(initReactI18next)
+            .init({
+                resources: {
+                    en: { translation: enTranslation },
+                    zh: { translation: zhTranslation },
+                    ja: { translation: jaTranslation }
+                },
+                lng: 'zh', // 默认语言
+                fallbackLng: 'en',
+                interpolation: {
+                    escapeValue: false
+                }
+            })
+            .then(() => {
+                const { t: newT } = i18n;
+                setT(() => newT);
+            });
         return () => {
             clearWorker();
         };
@@ -123,7 +147,11 @@ function FastUpload() {
                 workerRef.current.terminate();
             }
 
-            const worker = new Worker(new URL('./UploadWorker.js', import.meta.url), {type: 'module'});
+            // const worker = new Worker(new URL('./UploadWorker.js', import.meta.url), {type: 'module'});
+            const worker = new Worker(
+                new URL('./UploadWorker.js', import.meta.url).href,
+                { type: 'module' }
+              );
             workerRef.current = worker;
 
             worker.postMessage({action: 'upload', data: uploadFile, chunkSize: CHUNK_SIZE, userId: getUserId()});
@@ -297,50 +325,85 @@ function FastUpload() {
     }
 
     return (
-        <>
-            <Card style={{width: '500px'}}>
-                <Stack direction='column' spacing={1}>
-                    <span style={{textAlign: 'left', fontSize: '14px', marginTop: '-10px'}}>
-                        {t('uploader.title')}
-                    </span>
-                    <Card {...getRootProps()} style={{border: `1px dashed ${activeColor}`, height: 50}}>
-                        {
-                            isDragActive ? (
-                                <span style={{color: '#000'}}>
-                                    {t('uploader.releaseText')}
-                                </span>
-                            ) : (
-                                <a href={'#'} style={{fontWeight: 'normal', fontSize: '13px',color: '#000'}} onClick={(event) => {
-                                    event.preventDefault();
-                                    clear();
-                                    handleClick();
-                                }}>
-                                    {t('uploader.dragText')} <span
-                                    style={{fontWeight: 'bold', fontSize: '15px', color: '#4E79DA'}}>
-                                    {t('uploader.clickText')}</span> {t('uploader.chooseFile')}
-                                </a>
-                            )
-                        }
+        <Sheet
+            variant="outlined"
+            sx={{
+                width: 500,
+                maxWidth: '100%',
+                borderRadius: 'sm',
+                p: 2,
+                mb: 2,
+            }}
+        >
+            <Stack direction='column' spacing={1}>
+                <span style={{textAlign: 'left', fontSize: '14px', marginTop: '-10px'}}>
+                    {t('uploader.title')}
+                </span>
+                <Card {...getRootProps()} style={{border: `1px dashed ${activeColor}`, height: 50}}>
+                    {
+                        isDragActive ? (
+                            <span style={{color: '#000'}}>
+                                {t('uploader.releaseText')}
+                            </span>
+                        ) : (
+                            <a href={'#'} style={{fontWeight: 'normal', fontSize: '13px',color: '#000'}} onClick={(event) => {
+                                event.preventDefault();
+                                clear();
+                                handleClick();
+                            }}>
+                                {t('uploader.dragText')} <span
+                                style={{fontWeight: 'bold', fontSize: '15px', color: '#4E79DA'}}>
+                                {t('uploader.clickText')}</span> {t('uploader.chooseFile')}
+                            </a>
+                        )
+                    }
 
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
-                            <label style={{fontSize: '12px', color: fileColor}}>{fileName}</label>
-                            <label style={{fontSize: '10px', color: 'gray'}}>{fileSize == 0 ? '' : fileSize}</label>
-                        </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
+                        <label style={{fontSize: '12px', color: fileColor}}>{fileName}</label>
+                        <label style={{fontSize: '10px', color: 'gray'}}>{fileSize == 0 ? '' : fileSize}</label>
+                    </div>
 
-                        <form>
-                            <input {...getInputProps()} type="file" ref={fileInputRef} style={{display: 'none'}}
-                                   onChange={onFileSelect}/>
-                        </form>
-                        {/*<Button style={{width:100}}>Upload</Button>*/}
-                    </Card>
+                    <form>
+                        <input {...getInputProps()} type="file" ref={fileInputRef} style={{display: 'none'}}
+                               onChange={onFileSelect}/>
+                    </form>
+                    {/*<Button style={{width:100}}>Upload</Button>*/}
+                </Card>
 
-                    <Sheet sx={{height: 70, overflow: 'none'}}>
-                        <span style={{fontSize: '12px'}}>{progress}%</span>
-                        <LinearProgress determinate value={progress} size='sm'>
-                        </LinearProgress>
-                        <div style={{height: '20px'}}></div>
-                        <Divider style={{marginRight: '-17px', marginLeft: '-17px'}}/>
-                        <div style={{display: 'flex', justifyContent: 'flex-end', marginRight: '20px'}}>
+                <Sheet sx={{height: 70, overflow: 'none'}}>
+                    <span style={{fontSize: '12px'}}>{progress}%</span>
+                    <LinearProgress determinate value={progress} size='sm'>
+                    </LinearProgress>
+                    <div style={{height: '20px'}}></div>
+                    <Divider style={{marginRight: '-17px', marginLeft: '-17px'}}/>
+                    
+                    <div style={{
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginRight: '20px',
+                        marginLeft: '5px',
+                        marginTop: '5px',
+                        height: '28px'
+                    }}>
+                        <Typography
+                            level="body-sm"
+                            sx={{
+                                color: 'text.tertiary',
+                                fontSize: '0.55rem',
+                                lineHeight: '28px',
+                                marginTop: '10px'   
+                            }}
+                        >
+                            © 2024 FastUpload  All rights reserved.
+                        </Typography>
+
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: '100%',
+                            marginTop: '0px'
+                        }}>
                             {uploadStatus === 'paused' ? (
                                 <IconButton 
                                     variant="plain" 
@@ -348,7 +411,8 @@ function FastUpload() {
                                     onClick={handleResume}
                                     sx={{ 
                                         color: '#0B6BCB',
-                                        '&:hover': { color: '#0A54A0' }
+                                        '&:hover': { color: '#0A54A0' },
+                                        padding: '4px'
                                     }}
                                 >
                                     <PlayArrowIcon />
@@ -360,7 +424,8 @@ function FastUpload() {
                                     onClick={handlePause}
                                     sx={{ 
                                         color: '#0B6BCB',
-                                        '&:hover': { color: '#0A54A0' }
+                                        '&:hover': { color: '#0A54A0' },
+                                        padding: '4px'
                                     }}
                                 >
                                     <PauseCircleOutlineOutlinedIcon/>
@@ -372,71 +437,73 @@ function FastUpload() {
                                 onClick={handleStop}
                                 sx={{ 
                                     color: '#0B6BCB',
-                                    '&:hover': { color: '#0A54A0' }
+                                    '&:hover': { color: '#0A54A0' },
+                                    padding: '4px'
                                 }}
                             >
                                 <StopCircleOutlinedIcon/>
                             </IconButton>
                         </div>
-                    </Sheet>
-                </Stack>
-                {isLoading && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000,
-                        borderRadius: 'inherit'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <span>{t('uploader.loading')}</span>
-                            <span style={{ width: '24px', textAlign: 'left' }} className="loading-dots"></span>
-                        </div>
-                        <style>
-                            {`
-                                .loading-dots::after {
-                                    content: '';
-                                    animation: dots 1.5s steps(4, end) infinite;
-                                }
-                                
-                                @keyframes dots {
-                                    0%, 20% {
-                                        content: '';
-                                    }
-                                    40% {
-                                        content: '.';
-                                    }
-                                    60% {
-                                        content: '..';
-                                    }
-                                    80%, 100% {
-                                        content: '...';
-                                    }
-                                }
-                            `}
-                        </style>
-                        <IconButton 
-                            variant="plain" 
-                            onClick={handleCancel}
-                            sx={{ 
-                                color: '#0B6BCB',
-                                // '&:hover': { color: '#0A54A0' }
-                            }}
-                        >
-                            <StopCircleOutlinedIcon/>
-                        </IconButton>
                     </div>
-                )}
-            </Card>
-        </>
+                </Sheet>
+            </Stack>
+            {isLoading && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    borderRadius: 'inherit'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span>{t('uploader.loading')}</span>
+                        <span style={{ width: '24px', textAlign: 'left' }} className="loading-dots"></span>
+                    </div>
+                    <style>
+                        {`
+                            .loading-dots::after {
+                                content: '';
+                                animation: dots 1.5s steps(4, end) infinite;
+                            }
+                            
+                            @keyframes dots {
+                                0%, 20% {
+                                    content: '';
+                                }
+                                40% {
+                                    content: '.';
+                                }
+                                60% {
+                                    content: '..';
+                                }
+                                80%, 100% {
+                                    content: '...';
+                                }
+                            }
+                        `}
+                    </style>
+                    <IconButton 
+                        variant="plain" 
+                        onClick={handleCancel}
+                        sx={{ 
+                            color: '#0B6BCB',
+                            // '&:hover': { color: '#0A54A0' }
+                        }}
+                    >
+                        <StopCircleOutlinedIcon/>
+                    </IconButton>
+                </div>
+            )}
+        </Sheet>
     )
 }
-
+export { FastUpload }
 export default FastUpload
+

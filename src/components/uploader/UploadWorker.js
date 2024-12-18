@@ -137,7 +137,6 @@ function getChunkMD5(chunk) {
         fileReader.onerror = function () {
             reject('Error occurred while reading the file');
         };
-
         function readChunk(chunk) {
             fileReader.readAsArrayBuffer(chunk);
         }
@@ -507,3 +506,4 @@ async function uploadFile(uploadFile) {
 }
 
 export default self;
+
