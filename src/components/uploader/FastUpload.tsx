@@ -57,7 +57,7 @@ function FastUpload() {
     const [isLoading, setIsLoading] = useState(false);
     const isCancelled = useRef(false);
     useEffect(() => {
-        console.log('FastUpload useEffect');
+        // console.log('FastUpload useEffect');
         i18n
             .use(initReactI18next)
             .init({
@@ -147,11 +147,10 @@ function FastUpload() {
                 workerRef.current.terminate();
             }
 
-            // const worker = new Worker(new URL('./UploadWorker.js', import.meta.url), {type: 'module'});
-            const worker = new Worker(
-                new URL('./UploadWorker.js', import.meta.url).href,
-                { type: 'module' }
-              );
+            const workerUrl = new URL('../../UploadWorker.js', import.meta.url).href;
+            const worker = new Worker(workerUrl, {
+                type: 'module'
+            });
             workerRef.current = worker;
 
             worker.postMessage({action: 'upload', data: uploadFile, chunkSize: CHUNK_SIZE, userId: getUserId()});
