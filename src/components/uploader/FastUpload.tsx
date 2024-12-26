@@ -58,6 +58,7 @@ function FastUpload() {
     const isCancelled = useRef(false);
     useEffect(() => {
         // console.log('FastUpload useEffect');
+        (async () => {
         i18n
             .use(initReactI18next)
             .init({
@@ -76,6 +77,102 @@ function FastUpload() {
                 const { t: newT } = i18n;
                 setT(() => newT);
             });
+            
+            // 只在 workerRef.current 为 null 时创建新的 worker
+            if(!workerRef.current){
+                try {
+                    console.log('Creating new worker...');
+                    // 使用动态导入方式
+                    const workerUrl = new URL('./UploadWorker.js', import.meta.url);
+                    console.log('Attempting to load worker from:', workerUrl.toString());
+        
+                     // 先检查文件是否存在，等待结果
+                    await fetch(workerUrl.toString())
+                    .then(response => {
+                        console.log('Worker file response:', response.status, response.statusText, response);
+                        if (!response.ok) {
+                            throw new Error(`Worker file not found: ${response.status}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Worker file fetch error:', error);
+                        throw error; // 重新抛出错误
+                    });
+
+                // 只有在文件存在时才创建 Worker
+                const worker = new Worker(workerUrl, {
+                    type: 'module'
+                });
+
+                    // 立即添加消息处理器
+                    worker.onmessage = function (e) {
+                        console.log('Main thread received message:', e.data);
+                        const {action, loaded, fileId, data, time} = e.data;
+                        switch (action) {
+                            case 'progress':
+                                updateProgress(fileId, loaded);
+                                if(progressRef.current === 100){
+                                    setCanStop(false);
+                                    setUploadStatus('completed');
+                                    // clearWorker();
+                                }
+    
+                                break;
+                            case 'checksum_progress':
+                                updateChecksumProgress(fileId, loaded);
+                                break;
+                            case 'completed':
+                                setCanStop(false);
+                                setProgress(100);
+                                setUploadStatus('completed');
+                                console.log('Time consumed:', time);
+                                // clearWorker();
+                                break;
+                            case 'error':
+                                setFileColor('red');
+                                setUploadStatus('error');
+                                setCanStop(false);
+                                break;
+                            case 'stopped':
+                                setCanStop(false);
+                                setUploadStatus('stopped');
+                                setProgress(0);
+                                clearWorker();
+                                break;
+                            case 'paused':
+                                setUploadStatus('paused');
+                                break;
+                            case 'resumed':
+                                setUploadStatus('uploading');
+                                break;
+                        }
+                    };
+                    
+                    
+                    worker.onerror = function(e) {
+                        console.error('Worker error occurred');
+                        // 阻止错误冒泡
+                        e.preventDefault();
+                    };
+                                // 添加消息错误处理
+                    worker.onmessageerror = function(e) {
+                        console.error('Worker message error:', e);
+                    };
+                    
+                    console.log('Worker created:', worker);
+                    workerRef.current = worker;
+                    
+                    // 测试 worker 是否能正常工作
+                    worker.postMessage({ action: 'test' });
+                    
+                } catch (error) {
+                    console.error('Error creating worker:', error);
+                }
+            }
+
+            console.log('workerRef.current', workerRef.current);
+        })();
+
         return () => {
             clearWorker();
         };
@@ -129,7 +226,11 @@ function FastUpload() {
     }
 
     function upload(uploadFile: UploadFile) {
-        console.log('start upload', uploadFile.file);
+        console.log('Preparing to send message to worker:', uploadFile);
+        if (!workerRef.current) {
+            console.error('Worker not initialized!');
+            return;
+        }
         setCanStop(true);
         setUploadStatus('uploading');
         const {file} = uploadFile;
@@ -143,60 +244,19 @@ function FastUpload() {
 
             setFileName(file.name);
 
-            if (workerRef.current) {
-                workerRef.current.terminate();
-            }
+            const worker =  workerRef.current;
+            console.log('worker postMessage upload', worker);
+            // worker.postMessage({action: 'upload', data: uploadFile, chunkSize: CHUNK_SIZE, userId: getUserId()});
 
-            const workerUrl = new URL('../../UploadWorker.js', import.meta.url).href;
-            const worker = new Worker(workerUrl, {
-                type: 'module'
-            });
-            workerRef.current = worker;
-
-            worker.postMessage({action: 'upload', data: uploadFile, chunkSize: CHUNK_SIZE, userId: getUserId()});
-            worker.onmessage = function (e) {
-                console.log('received worker message:', e);
-                const {action, loaded, fileId, data, time} = e.data;
-                switch (action) {
-                    case 'progress':
-                        updateProgress(fileId, loaded);
-                        if(progressRef.current === 100){
-                            setCanStop(false);
-                            setUploadStatus('completed');
-                            clearWorker();
-                        }
-
-                        break;
-                    case 'checksum_progress':
-                        updateChecksumProgress(fileId, loaded);
-                        break;
-                    case 'completed':
-                        setCanStop(false);
-                        setProgress(100);
-                        setUploadStatus('completed');
-                        console.log('Time consumed:', time);
-                        clearWorker();
-                        break;
-                    case 'error':
-                        setFileColor('red');
-                        setUploadStatus('error');
-                        setCanStop(false);
-                        break;
-                    case 'stopped':
-                        setCanStop(false);
-                        setUploadStatus('stopped');
-                        setProgress(0);
-                        clearWorker();
-                        break;
-                    case 'paused':
-                        setUploadStatus('paused');
-                        break;
-                    case 'resumed':
-                        setUploadStatus('uploading');
-                        break;
-                }
-            }
-            worker.onerror = function (e) {
+            try {
+                workerRef.current.postMessage({
+                    action: 'upload', 
+                    data: uploadFile, 
+                    chunkSize: CHUNK_SIZE, 
+                    userId: getUserId()
+                });
+            } catch (error) {
+                console.error('Error posting message to worker:', error);
             }
         }
     }

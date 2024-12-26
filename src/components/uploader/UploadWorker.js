@@ -2,7 +2,6 @@
 
 import { createApi } from '../../api/axios';
 import SparkMD5 from 'spark-md5'
-import {nanoid} from "nanoid";
 import {UploadController} from './UploadController';
 
 const FILE_STATUS = {
@@ -20,12 +19,12 @@ const FILE_STATUS = {
 // };
 
 // console.log('worker:', self);
-console.log('Worker script loaded');
+
 let api = null;
 let uploadController = new UploadController();
-
+console.log('UploadWorker initialized');
 self.onmessage = function (event) {
-    console.log('Worker received message:', event.data);
+    console.log('UploadWorker received message:', event.data);
     const {action, data, chunkSize, userId} = event.data;
     
     // 添加错误处理
@@ -38,6 +37,7 @@ self.onmessage = function (event) {
 
         switch (action) {
             case 'upload':
+                console.log('Starting upload process in worker');
                 uploadController = new UploadController();
                 uploadFile(data, chunkSize);
                 break;
@@ -60,8 +60,14 @@ self.onmessage = function (event) {
     }
 };
 
+// 添加错误处理
+self.onerror = function(e) {
+    console.error('Worker internal error:', e);
+};
+
 // 确保 worker 脚本加载完成
 self.postMessage({ action: 'ready' });
+console.log('Worker script loaded', self);
 
 async function uploadChunk(chunk, index, fileId, clientFileId) {
     // 检查是否已停止
@@ -440,7 +446,7 @@ async function uploadFile(uploadFile) {
         const chunkPromises = [];
 
         if (res.status === FILE_STATUS.COMPLETED) { //秒传
-            console.time('flash upload');
+            // console.time('flash upload');
             timeDiff = new Date() - startTime;
             // postMessage({action: 'completed', fileId: file.name, data: res, time: timeDiff});
         }
