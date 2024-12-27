@@ -1,8 +1,6 @@
 import {defineConfig} from 'vite'
 import react from '@vitejs/plugin-react'
-import {resolve} from 'path';
-import path from 'path';
-import worker from 'worker-plugin'
+import {resolve} from 'path'
 import dts from 'vite-plugin-dts'
 import pkg from './package.json'
 
@@ -15,25 +13,37 @@ const banner = `/**
  */
 `;
 
-// https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [react(), dts({
-        insertTypesEntry: true,
-        include: ['src/components/uploader/FastUpload.tsx', 
-            'src/index.ts'
-        ]
-    })],
+    plugins: [
+        react(),
+        dts({
+            insertTypesEntry: true,
+            include: ['src/components/uploader/FastUpload.tsx']
+        }),
+        {
+            name: 'worker-bundle',
+            generateBundle(options, bundle) {
+                if (bundle['worker.js']) {
+                    bundle['UploadWorker.js'] = bundle['worker.js'];
+                    delete bundle['worker.js'];
+                }
+            }
+        }
+    ],
     build: {
         lib: {
-            entry: {
-                'FastUpload': resolve(__dirname, 'src/components/uploader/FastUpload.tsx'),
-                'UploadWorker': resolve(__dirname, 'src/components/uploader/UploadWorker.js')
-            },
+            entry: resolve(__dirname, 'src/components/uploader/FastUpload.tsx'),
             formats: ['es'],
-            fileName: (format, entryName) => `${entryName}.${format}.js`
+            fileName: (format) => `fastupload.${format}.js`
         },
         rollupOptions: {
-            external: ['react', 'react-dom', '@mui/joy', '@emotion/react'],
+            external: ['react', 'react-dom', '@mui/joy', '@emotion/react', 'i18next', 'react-i18next'],
+            input: {
+                'fastupload': resolve(__dirname, 'src/components/uploader/FastUpload.tsx'),
+                'locales/en': resolve(__dirname, 'src/locales/en.ts'),
+                'locales/zh': resolve(__dirname, 'src/locales/zh.ts'),
+                'locales/ja': resolve(__dirname, 'src/locales/ja.ts')
+            },
             output: {
                 banner,
                 exports: 'named',
@@ -41,37 +51,45 @@ export default defineConfig({
                     react: 'React',
                     'react-dom': 'ReactDOM',
                     '@mui/joy': 'MuiJoy',
-                    '@emotion/react': 'EmotionReact'
-                },
-                assetFileNames: (assetInfo) => {
-                    if (assetInfo.name?.includes('locales/')) {
-                        return assetInfo.name.replace(/\.ts$/, '');
-                    }
-                    return 'assets/[name]-[hash][extname]';
+                    '@emotion/react': 'EmotionReact',
+                    'i18next': 'i18next',
+                    'react-i18next': 'ReactI18next'
                 },
                 entryFileNames: (chunkInfo) => {
-                    if (chunkInfo.name === 'UploadWorker') {
-                        return 'UploadWorker.js';
+                    if (chunkInfo.name === 'fastupload') {
+                        return 'fastupload.es.js'
                     }
-                    if (chunkInfo.name?.includes('locales/')) {
-                        return '[name]';
+                    if (chunkInfo.name.startsWith('locales/')) {
+                        return `${chunkInfo.name}.js`
                     }
-                    return chunkInfo.isEntry ? 'FastUpload.[format].js' : '[name].js';
+                    return '[name].js'
+                },
+                chunkFileNames: (chunkInfo) => {
+                    if (chunkInfo.name === 'worker') {
+                        return 'UploadWorker.js'
+                    }
+                    return '[name]-[hash].js'
                 },
                 preserveModules: false,
-                inlineDynamicImports: false,
-                compact: true,
-                generatedCode: {
-                    preset: 'es2015',
-                    symbols: false
+                manualChunks: (id) => {
+                    if (id.includes('UploadWorker.js') || 
+                        id.includes('UploadController') ||
+                        id.includes('api/axios') ||
+                        id.includes('node_modules/axios') ||
+                        id.includes('node_modules/nanoid') ||
+                        id.includes('node_modules/spark-md5')) {
+                        return 'worker'
+                    }
+                    return null;
                 }
             }
         },
         minify: true,
-        copyPublicDir: true,
-        assetsDir: '.',
-        emptyOutDir: true,
-        sourcemap: true
+        sourcemap: true,
+        worker: {
+            format: 'es',
+            plugins: []
+        }
     }
 })
 
