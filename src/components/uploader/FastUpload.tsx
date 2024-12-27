@@ -40,7 +40,7 @@ const CHUNK_SIZE = 1 * 1024 * 1024 //1M bytes
 const MAX_WORKERS_FILE = 3;
 const MAX_WORKERS = 5;
 
-function FastUpload() {
+function FastUpload({ lang = 'en' }) {
     const [t, setT] = useState(() => (key: string) => key);
     const [progress, setProgress] = useState(0);
     const progressRef = useRef(0);
@@ -67,7 +67,7 @@ function FastUpload() {
                     zh: { translation: zhTranslation },
                     ja: { translation: jaTranslation }
                 },
-                lng: 'zh', // 默认语言
+                lng: lang, // 默认语言
                 fallbackLng: 'en',
                 interpolation: {
                     escapeValue: false
@@ -82,7 +82,7 @@ function FastUpload() {
             if(!workerRef.current){
                 try {
                     console.log('Creating new worker...');
-                    // 使用动态导入方式
+                   
                     const workerUrl = new URL('./UploadWorker.js', import.meta.url);
                     console.log('Attempting to load worker from:', workerUrl.toString());
         
@@ -99,10 +99,10 @@ function FastUpload() {
                         throw error; // 重新抛出错误
                     });
 
-                // 只有在文件存在时才创建 Worker
-                const worker = new Worker(workerUrl, {
-                    type: 'module'
-                });
+                    // 只有在文件存在时才创建 Worker
+                    const worker = new Worker(workerUrl, {
+                        type: 'module'
+                    });
 
                     // 立即添加消息处理器
                     worker.onmessage = function (e) {
@@ -147,12 +147,12 @@ function FastUpload() {
                                 break;
                         }
                     };
-                    
+                     
                     
                     worker.onerror = function(e) {
-                        console.error('Worker error occurred');
+                        console.error('Worker error occurred', e);
                         // 阻止错误冒泡
-                        e.preventDefault();
+                        // e.preventDefault();
                     };
                                 // 添加消息错误处理
                     worker.onmessageerror = function(e) {
@@ -176,7 +176,7 @@ function FastUpload() {
         return () => {
             clearWorker();
         };
-    }, []);
+    }, [lang]);
 
     // onDrop 函数会在文件被拖放时调用
     const onDrop = useCallback(async (acceptedFiles) => {
