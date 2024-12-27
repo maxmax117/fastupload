@@ -22,9 +22,9 @@ const FILE_STATUS = {
 
 let api = null;
 let uploadController = new UploadController();
-console.log('UploadWorker initialized');
+console.log('UploadWorker initializing');
 self.onmessage = function (event) {
-    console.log('UploadWorker received message:', event.data);
+    console.log('Worker thread received message:', event.data);
     const {action, data, chunkSize, userId} = event.data;
     
     // 添加错误处理
@@ -67,7 +67,7 @@ self.onerror = function(e) {
 
 // 确保 worker 脚本加载完成
 self.postMessage({ action: 'ready' });
-console.log('Worker script loaded', self);
+console.log('UploadWorker initialized!', self);
 
 async function uploadChunk(chunk, index, fileId, clientFileId) {
     // 检查是否已停止
@@ -511,5 +511,5 @@ async function uploadFile(uploadFile) {
     }
 }
 
-export default self;
+// export default self;
 
