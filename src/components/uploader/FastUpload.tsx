@@ -2,7 +2,7 @@ import Card from '@mui/joy/Card';
 import Divider from '@mui/joy/Divider';
 import {useDropzone} from 'react-dropzone';
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Grid, IconButton, LinearProgress, Sheet, Stack, Typography} from "@mui/joy";
+import {IconButton, LinearProgress, Sheet, Stack, Typography} from "@mui/joy";
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -10,12 +10,12 @@ import { styled } from '@mui/joy/styles';
 import { UploadFile } from './interface';
 import {getUserId } from '../../api/axios';
 import { nanoid } from 'nanoid';
-import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import enTranslation from '../../locales/en';
 import zhTranslation from '../../locales/zh';
 import jaTranslation from '../../locales/ja';
+import UploadWorker from './UploadWorker?worker&inline' 
 
 function createData(
     name: string,
@@ -83,7 +83,8 @@ function FastUpload({ lang = 'en' }) {
                 try {
                     console.log('Creating new worker...');
                    
-                    const workerUrl = new URL('./UploadWorker.js', import.meta.url);
+                    // const workerUrl = new URL('./UploadWorker.js', import.meta.url);
+                    const workerUrl = new URL('/dist/UploadWorker.js', import.meta.url);
                     console.log('Attempting to load worker from:', workerUrl.toString());
         
                      // 先检查文件是否存在，等待结果
@@ -99,10 +100,19 @@ function FastUpload({ lang = 'en' }) {
                         throw error; // 重新抛出错误
                     });
 
+                    const worker = new UploadWorker();
+
+                    // const worker = new Worker(workerUrl, { 
+                    //     type: 'classic',
+                    //     credentials: 'same-origin'
+                    // });
+
+
+
                     // 只有在文件存在时才创建 Worker
-                    const worker = new Worker(workerUrl, {
-                        type: 'module'
-                    });
+                    // const worker = new Worker(workerUrl, {
+                    //     type: 'module'
+                    // });
 
                     // 立即添加消息处理器
                     worker.onmessage = function (e) {
@@ -147,12 +157,17 @@ function FastUpload({ lang = 'en' }) {
                                 break;
                         }
                     };
-                     
                     
-                    worker.onerror = function(e) {
-                        console.error('Worker error occurred', e);
-                        // 阻止错误冒泡
-                        // e.preventDefault();
+                    worker.onerror = function(error) {
+                        console.error('Worker error occurred', error);
+                        console.error('Worker error:', {
+                            message: error.message,
+                            filename: error.filename,
+                            lineno: error.lineno,
+                            colno: error.colno,
+                            error: error.error,
+                            stack: error.error?.stack
+                        });
                     };
                                 // 添加消息错误处理
                     worker.onmessageerror = function(e) {

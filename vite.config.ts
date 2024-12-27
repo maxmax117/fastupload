@@ -28,6 +28,17 @@ export default defineConfig({
                     delete bundle['worker.js'];
                 }
             }
+        },
+        {
+            name: 'cleanup-worker',
+            generateBundle(options, bundle) {
+                // 在生成 bundle 时删除重复的 worker 文件
+                for (const fileName in bundle) {
+                    if (fileName.includes('UploadWorker') && fileName.includes('assets')) {
+                        delete bundle[fileName];
+                    }
+                }
+            }
         }
     ],
     build: {
@@ -38,39 +49,9 @@ export default defineConfig({
         },
         rollupOptions: {
             external: ['react', 'react-dom', '@mui/joy', '@emotion/react', 'i18next', 'react-i18next'],
-            input: {
-                'fastupload': resolve(__dirname, 'src/components/uploader/FastUpload.tsx'),
-                'locales/en': resolve(__dirname, 'src/locales/en.ts'),
-                'locales/zh': resolve(__dirname, 'src/locales/zh.ts'),
-                'locales/ja': resolve(__dirname, 'src/locales/ja.ts')
-            },
             output: {
-                banner,
-                exports: 'named',
-                globals: {
-                    react: 'React',
-                    'react-dom': 'ReactDOM',
-                    '@mui/joy': 'MuiJoy',
-                    '@emotion/react': 'EmotionReact',
-                    'i18next': 'i18next',
-                    'react-i18next': 'ReactI18next'
-                },
-                entryFileNames: (chunkInfo) => {
-                    if (chunkInfo.name === 'fastupload') {
-                        return 'fastupload.es.js'
-                    }
-                    if (chunkInfo.name.startsWith('locales/')) {
-                        return `${chunkInfo.name}.js`
-                    }
-                    return '[name].js'
-                },
-                chunkFileNames: (chunkInfo) => {
-                    if (chunkInfo.name === 'worker') {
-                        return 'UploadWorker.js'
-                    }
-                    return '[name]-[hash].js'
-                },
-                preserveModules: false,
+                dir: 'dist',
+                format: 'es',
                 manualChunks: (id) => {
                     if (id.includes('UploadWorker.js') || 
                         id.includes('UploadController') ||
@@ -78,16 +59,23 @@ export default defineConfig({
                         id.includes('node_modules/axios') ||
                         id.includes('node_modules/nanoid') ||
                         id.includes('node_modules/spark-md5')) {
-                        return 'worker'
+                        return 'worker';
                     }
                     return null;
+                },
+                entryFileNames: '[name].[format].js',
+                chunkFileNames: (chunkInfo) => {
+                    if (chunkInfo.name === 'worker') {
+                        return 'UploadWorker.js';
+                    }
+                    return 'assets/[name]-[hash].js';
                 }
             }
         },
         minify: true,
         sourcemap: true,
         worker: {
-            format: 'es',
+            format: 'iife',
             plugins: []
         }
     }

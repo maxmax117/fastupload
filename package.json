@@ -1,7 +1,7 @@
 {
   "name": "@maxmax117/fastupload",
   "private": false,
-  "version": "0.9.12",
+  "version": "0.9.53",
   "type": "module",
   "files": [
     "dist"
