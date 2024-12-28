@@ -1,0 +1,14 @@
+node_modules/
+src/
+.git/
+.gitignore
+.env
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.test.*
+*.spec.*
+vite.config.ts
+tsconfig.json
+.eslintrc

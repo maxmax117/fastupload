@@ -2,7 +2,7 @@ import Card from '@mui/joy/Card';
 import Divider from '@mui/joy/Divider';
 import {useDropzone} from 'react-dropzone';
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Grid, IconButton, LinearProgress, Sheet, Stack} from "@mui/joy";
+import {IconButton, LinearProgress, Sheet, Stack, Typography} from "@mui/joy";
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -10,7 +10,12 @@ import { styled } from '@mui/joy/styles';
 import { UploadFile } from './interface';
 import {getUserId } from '../../api/axios';
 import { nanoid } from 'nanoid';
-import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import enTranslation from '../../locales/en';
+import zhTranslation from '../../locales/zh';
+import jaTranslation from '../../locales/ja';
+import UploadWorker from './UploadWorker?worker&inline' 
 
 function createData(
     name: string,
@@ -35,8 +40,8 @@ const CHUNK_SIZE = 1 * 1024 * 1024 //1M bytes
 const MAX_WORKERS_FILE = 3;
 const MAX_WORKERS = 5;
 
-function FastUpload() {
-    const { t } = useTranslation();
+function FastUpload({ lang = 'en' }) {
+    const [t, setT] = useState(() => (key: string) => key);
     const [progress, setProgress] = useState(0);
     const progressRef = useRef(0);
     const [fileSize, setFileSize] = useState(0)
@@ -52,10 +57,141 @@ function FastUpload() {
     const [isLoading, setIsLoading] = useState(false);
     const isCancelled = useRef(false);
     useEffect(() => {
+        // console.log('FastUpload useEffect');
+        (async () => {
+        i18n
+            .use(initReactI18next)
+            .init({
+                resources: {
+                    en: { translation: enTranslation },
+                    zh: { translation: zhTranslation },
+                    ja: { translation: jaTranslation }
+                },
+                lng: lang, // 默认语言
+                fallbackLng: 'en',
+                interpolation: {
+                    escapeValue: false
+                }
+            })
+            .then(() => {
+                const { t: newT } = i18n;
+                setT(() => newT);
+            });
+            
+            // 只在 workerRef.current 为 null 时创建新的 worker
+            if(!workerRef.current){
+                try {
+                    console.log('Creating new worker...');
+                   
+                    // const workerUrl = new URL('./UploadWorker.js', import.meta.url);
+                    const workerUrl = new URL('/dist/UploadWorker.js', import.meta.url);
+                    console.log('Attempting to load worker from:', workerUrl.toString());
+        
+                     // 先检查文件是否存在，等待结果
+                    await fetch(workerUrl.toString())
+                    .then(response => {
+                        console.log('Worker file response:', response.status, response.statusText, response);
+                        if (!response.ok) {
+                            throw new Error(`Worker file not found: ${response.status}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Worker file fetch error:', error);
+                        throw error; // 重新抛出错误
+                    });
+
+                    const worker = new UploadWorker();
+
+                    // const worker = new Worker(workerUrl, { 
+                    //     type: 'classic',
+                    //     credentials: 'same-origin'
+                    // });
+
+
+
+                    // 只有在文件存在时才创建 Worker
+                    // const worker = new Worker(workerUrl, {
+                    //     type: 'module'
+                    // });
+
+                    // 立即添加消息处理器
+                    worker.onmessage = function (e) {
+                        console.log('Main thread received message:', e.data);
+                        const {action, loaded, fileId, data, time} = e.data;
+                        switch (action) {
+                            case 'progress':
+                                updateProgress(fileId, loaded);
+                                if(progressRef.current === 100){
+                                    setCanStop(false);
+                                    setUploadStatus('completed');
+                                    // clearWorker();
+                                }
+    
+                                break;
+                            case 'checksum_progress':
+                                updateChecksumProgress(fileId, loaded);
+                                break;
+                            case 'completed':
+                                setCanStop(false);
+                                setProgress(100);
+                                setUploadStatus('completed');
+                                console.log('Time consumed:', time);
+                                // clearWorker();
+                                break;
+                            case 'error':
+                                setFileColor('red');
+                                setUploadStatus('error');
+                                setCanStop(false);
+                                break;
+                            case 'stopped':
+                                setCanStop(false);
+                                setUploadStatus('stopped');
+                                setProgress(0);
+                                clearWorker();
+                                break;
+                            case 'paused':
+                                setUploadStatus('paused');
+                                break;
+                            case 'resumed':
+                                setUploadStatus('uploading');
+                                break;
+                        }
+                    };
+                    
+                    worker.onerror = function(error) {
+                        console.error('Worker error occurred', error);
+                        console.error('Worker error:', {
+                            message: error.message,
+                            filename: error.filename,
+                            lineno: error.lineno,
+                            colno: error.colno,
+                            error: error.error,
+                            stack: error.error?.stack
+                        });
+                    };
+                                // 添加消息错误处理
+                    worker.onmessageerror = function(e) {
+                        console.error('Worker message error:', e);
+                    };
+                    
+                    console.log('Worker created:', worker);
+                    workerRef.current = worker;
+                    
+                    // 测试 worker 是否能正常工作
+                    worker.postMessage({ action: 'test' });
+                    
+                } catch (error) {
+                    console.error('Error creating worker:', error);
+                }
+            }
+
+            console.log('workerRef.current', workerRef.current);
+        })();
+
         return () => {
             clearWorker();
         };
-    }, []);
+    }, [lang]);
 
     // onDrop 函数会在文件被拖放时调用
     const onDrop = useCallback(async (acceptedFiles) => {
@@ -105,7 +241,11 @@ function FastUpload() {
     }
 
     function upload(uploadFile: UploadFile) {
-        console.log('start upload', uploadFile.file);
+        console.log('Preparing to send message to worker:', uploadFile);
+        if (!workerRef.current) {
+            console.error('Worker not initialized!');
+            return;
+        }
         setCanStop(true);
         setUploadStatus('uploading');
         const {file} = uploadFile;
@@ -119,57 +259,19 @@ function FastUpload() {
 
             setFileName(file.name);
 
-            if (workerRef.current) {
-                workerRef.current.terminate();
-            }
+            const worker =  workerRef.current;
+            console.log('worker postMessage upload', worker);
+            // worker.postMessage({action: 'upload', data: uploadFile, chunkSize: CHUNK_SIZE, userId: getUserId()});
 
-            const worker = new Worker(new URL('./UploadWorker.js', import.meta.url), {type: 'module'});
-            workerRef.current = worker;
-
-            worker.postMessage({action: 'upload', data: uploadFile, chunkSize: CHUNK_SIZE, userId: getUserId()});
-            worker.onmessage = function (e) {
-                console.log('received worker message:', e);
-                const {action, loaded, fileId, data, time} = e.data;
-                switch (action) {
-                    case 'progress':
-                        updateProgress(fileId, loaded);
-                        if(progressRef.current === 100){
-                            setCanStop(false);
-                            setUploadStatus('completed');
-                            clearWorker();
-                        }
-
-                        break;
-                    case 'checksum_progress':
-                        updateChecksumProgress(fileId, loaded);
-                        break;
-                    case 'completed':
-                        setCanStop(false);
-                        setProgress(100);
-                        setUploadStatus('completed');
-                        console.log('Time consumed:', time);
-                        clearWorker();
-                        break;
-                    case 'error':
-                        setFileColor('red');
-                        setUploadStatus('error');
-                        setCanStop(false);
-                        break;
-                    case 'stopped':
-                        setCanStop(false);
-                        setUploadStatus('stopped');
-                        setProgress(0);
-                        clearWorker();
-                        break;
-                    case 'paused':
-                        setUploadStatus('paused');
-                        break;
-                    case 'resumed':
-                        setUploadStatus('uploading');
-                        break;
-                }
-            }
-            worker.onerror = function (e) {
+            try {
+                workerRef.current.postMessage({
+                    action: 'upload', 
+                    data: uploadFile, 
+                    chunkSize: CHUNK_SIZE, 
+                    userId: getUserId()
+                });
+            } catch (error) {
+                console.error('Error posting message to worker:', error);
             }
         }
     }
@@ -297,50 +399,85 @@ function FastUpload() {
     }
 
     return (
-        <>
-            <Card style={{width: '500px'}}>
-                <Stack direction='column' spacing={1}>
-                    <span style={{textAlign: 'left', fontSize: '14px', marginTop: '-10px'}}>
-                        {t('uploader.title')}
-                    </span>
-                    <Card {...getRootProps()} style={{border: `1px dashed ${activeColor}`, height: 50}}>
-                        {
-                            isDragActive ? (
-                                <span style={{color: '#000'}}>
-                                    {t('uploader.releaseText')}
-                                </span>
-                            ) : (
-                                <a href={'#'} style={{fontWeight: 'normal', fontSize: '13px',color: '#000'}} onClick={(event) => {
-                                    event.preventDefault();
-                                    clear();
-                                    handleClick();
-                                }}>
-                                    {t('uploader.dragText')} <span
-                                    style={{fontWeight: 'bold', fontSize: '15px', color: '#4E79DA'}}>
-                                    {t('uploader.clickText')}</span> {t('uploader.chooseFile')}
-                                </a>
-                            )
-                        }
+        <Sheet
+            variant="outlined"
+            sx={{
+                width: 500,
+                maxWidth: '100%',
+                borderRadius: 'sm',
+                p: 2,
+                mb: 2,
+            }}
+        >
+            <Stack direction='column' spacing={1}>
+                <span style={{textAlign: 'left', fontSize: '14px', marginTop: '-10px'}}>
+                    {t('uploader.title')}
+                </span>
+                <Card {...getRootProps()} style={{border: `1px dashed ${activeColor}`, height: 50}}>
+                    {
+                        isDragActive ? (
+                            <span style={{color: '#000'}}>
+                                {t('uploader.releaseText')}
+                            </span>
+                        ) : (
+                            <a href={'#'} style={{fontWeight: 'normal', fontSize: '13px',color: '#000'}} onClick={(event) => {
+                                event.preventDefault();
+                                clear();
+                                handleClick();
+                            }}>
+                                {t('uploader.dragText')} <span
+                                style={{fontWeight: 'bold', fontSize: '15px', color: '#4E79DA'}}>
+                                {t('uploader.clickText')}</span> {t('uploader.chooseFile')}
+                            </a>
+                        )
+                    }
 
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
-                            <label style={{fontSize: '12px', color: fileColor}}>{fileName}</label>
-                            <label style={{fontSize: '10px', color: 'gray'}}>{fileSize == 0 ? '' : fileSize}</label>
-                        </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
+                        <label style={{fontSize: '12px', color: fileColor}}>{fileName}</label>
+                        <label style={{fontSize: '10px', color: 'gray'}}>{fileSize == 0 ? '' : fileSize}</label>
+                    </div>
 
-                        <form>
-                            <input {...getInputProps()} type="file" ref={fileInputRef} style={{display: 'none'}}
-                                   onChange={onFileSelect}/>
-                        </form>
-                        {/*<Button style={{width:100}}>Upload</Button>*/}
-                    </Card>
+                    <form>
+                        <input {...getInputProps()} type="file" ref={fileInputRef} style={{display: 'none'}}
+                               onChange={onFileSelect}/>
+                    </form>
+                    {/*<Button style={{width:100}}>Upload</Button>*/}
+                </Card>
 
-                    <Sheet sx={{height: 70, overflow: 'none'}}>
-                        <span style={{fontSize: '12px'}}>{progress}%</span>
-                        <LinearProgress determinate value={progress} size='sm'>
-                        </LinearProgress>
-                        <div style={{height: '20px'}}></div>
-                        <Divider style={{marginRight: '-17px', marginLeft: '-17px'}}/>
-                        <div style={{display: 'flex', justifyContent: 'flex-end', marginRight: '20px'}}>
+                <Sheet sx={{height: 70, overflow: 'none'}}>
+                    <span style={{fontSize: '12px'}}>{progress}%</span>
+                    <LinearProgress determinate value={progress} size='sm'>
+                    </LinearProgress>
+                    <div style={{height: '20px'}}></div>
+                    <Divider style={{marginRight: '-17px', marginLeft: '-17px'}}/>
+                    
+                    <div style={{
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginRight: '20px',
+                        marginLeft: '5px',
+                        marginTop: '5px',
+                        height: '28px'
+                    }}>
+                        <Typography
+                            level="body-sm"
+                            sx={{
+                                color: 'text.tertiary',
+                                fontSize: '0.55rem',
+                                lineHeight: '28px',
+                                marginTop: '10px'   
+                            }}
+                        >
+                            © 2024 FastUpload  All rights reserved.
+                        </Typography>
+
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: '100%',
+                            marginTop: '0px'
+                        }}>
                             {uploadStatus === 'paused' ? (
                                 <IconButton 
                                     variant="plain" 
@@ -348,7 +485,8 @@ function FastUpload() {
                                     onClick={handleResume}
                                     sx={{ 
                                         color: '#0B6BCB',
-                                        '&:hover': { color: '#0A54A0' }
+                                        '&:hover': { color: '#0A54A0' },
+                                        padding: '4px'
                                     }}
                                 >
                                     <PlayArrowIcon />
@@ -360,7 +498,8 @@ function FastUpload() {
                                     onClick={handlePause}
                                     sx={{ 
                                         color: '#0B6BCB',
-                                        '&:hover': { color: '#0A54A0' }
+                                        '&:hover': { color: '#0A54A0' },
+                                        padding: '4px'
                                     }}
                                 >
                                     <PauseCircleOutlineOutlinedIcon/>
@@ -372,71 +511,73 @@ function FastUpload() {
                                 onClick={handleStop}
                                 sx={{ 
                                     color: '#0B6BCB',
-                                    '&:hover': { color: '#0A54A0' }
+                                    '&:hover': { color: '#0A54A0' },
+                                    padding: '4px'
                                 }}
                             >
                                 <StopCircleOutlinedIcon/>
                             </IconButton>
                         </div>
-                    </Sheet>
-                </Stack>
-                {isLoading && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000,
-                        borderRadius: 'inherit'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <span>{t('uploader.loading')}</span>
-                            <span style={{ width: '24px', textAlign: 'left' }} className="loading-dots"></span>
-                        </div>
-                        <style>
-                            {`
-                                .loading-dots::after {
-                                    content: '';
-                                    animation: dots 1.5s steps(4, end) infinite;
-                                }
-                                
-                                @keyframes dots {
-                                    0%, 20% {
-                                        content: '';
-                                    }
-                                    40% {
-                                        content: '.';
-                                    }
-                                    60% {
-                                        content: '..';
-                                    }
-                                    80%, 100% {
-                                        content: '...';
-                                    }
-                                }
-                            `}
-                        </style>
-                        <IconButton 
-                            variant="plain" 
-                            onClick={handleCancel}
-                            sx={{ 
-                                color: '#0B6BCB',
-                                // '&:hover': { color: '#0A54A0' }
-                            }}
-                        >
-                            <StopCircleOutlinedIcon/>
-                        </IconButton>
                     </div>
-                )}
-            </Card>
-        </>
+                </Sheet>
+            </Stack>
+            {isLoading && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    borderRadius: 'inherit'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span>{t('uploader.loading')}</span>
+                        <span style={{ width: '24px', textAlign: 'left' }} className="loading-dots"></span>
+                    </div>
+                    <style>
+                        {`
+                            .loading-dots::after {
+                                content: '';
+                                animation: dots 1.5s steps(4, end) infinite;
+                            }
+                            
+                            @keyframes dots {
+                                0%, 20% {
+                                    content: '';
+                                }
+                                40% {
+                                    content: '.';
+                                }
+                                60% {
+                                    content: '..';
+                                }
+                                80%, 100% {
+                                    content: '...';
+                                }
+                            }
+                        `}
+                    </style>
+                    <IconButton 
+                        variant="plain" 
+                        onClick={handleCancel}
+                        sx={{ 
+                            color: '#0B6BCB',
+                            // '&:hover': { color: '#0A54A0' }
+                        }}
+                    >
+                        <StopCircleOutlinedIcon/>
+                    </IconButton>
+                </div>
+            )}
+        </Sheet>
     )
 }
-
+export { FastUpload }
 export default FastUpload
+
