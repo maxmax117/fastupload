@@ -25,17 +25,25 @@ let uploadController = new UploadController();
 console.log('UploadWorker initializing');
 self.onmessage = function (event) {
     console.log('Worker thread received message:', event.data);
-    const {action, data, chunkSize, userId} = event.data;
+    const {action, data, chunkSize, config} = event.data;
     
     // 添加错误处理
     try {
         // 初始化 api 实例（包含拦截器）
-        if (!api && userId) {
-            console.log('Initializing api with userId:', userId);
-            api = createApi(userId);
+        if (!api && config?.userId) {
+            console.log('Initializing api with userId:', config.userId);
+            api = createApi(config.userId);
         }
 
         switch (action) {
+            case 'init':
+                // 保存配置
+                const uploadServer = config.uploadServer;
+                const userId = config.userId;
+                if (userId) {
+                    api = createApi(userId, uploadServer);
+                }
+                break;
             case 'upload':
                 console.log('Starting upload process in worker');
                 uploadController = new UploadController();
