@@ -6,7 +6,7 @@
 ![FastUpload](./public/images/fastupload16.37.16.png)
 
 # 特性
-- 多线程上传，上传文件时不会阻塞UI页面，用户随时可以停止
+- 多线程上传，上传文件时不会阻塞UI页面，用户随时可以暂停或者取消
 - 支持超大文件上传
 - 上传实时进度显示
 - 支持断点续传
@@ -31,8 +31,8 @@ yarn add @maxmax117/fastupload
 <FastUpload lang='en'/>
 ```
 ## 后端上传服务器对接
-文件上传需要有后端服务支持，FastUpload组件是一个前端组件，本身不提供后端服务，需要你自己实现。
-为了简化大家的工作，我以不同后端开发语言实现了几套后端服务(bunjs、java、go)，如果你需要的话，可以联系我<a href="mailto:intellibiz.sh@gmail.com">intellibiz.sh@gmail.com</a>
+文件上传需要有后端服务支持，FastUpload组件是一个前端组件，本身不提供后端服务，需要你自己实现，你可以采用自己喜欢的语言和框架实现, Java、Go、Node.js、Bun.js、Python、PHP等。
+为了简化大家的工作，如果你需要的话，也可以联系我<a href="mailto:intellibiz.sh@gmail.com">intellibiz.sh@gmail.com</a>，我以不同后端开发语言实现了几套后端服务(bunjs、java、go)，可以作为独立的微服务开箱即用。
 
 如果你需要自己对接后端服务，可以参考以下步骤：
 
