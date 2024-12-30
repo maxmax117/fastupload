@@ -3,12 +3,13 @@ import axios, { AxiosInstance } from 'axios';
 import { nanoid } from 'nanoid';
 
 // 创建API实例的工厂函数
-export function createApi(userId: string): AxiosInstance {
+export function createApi(userId: string, uploadServer: string): AxiosInstance {
     const api = axios.create({
-        baseURL: 'http://localhost:3000',
+        baseURL: uploadServer,
         timeout: 30000,
         withCredentials: true,
         headers: {
+            'Content-Type': 'application/json',
             'X-User-ID': userId
         }
     });

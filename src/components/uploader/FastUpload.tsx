@@ -40,7 +40,7 @@ const CHUNK_SIZE = 1 * 1024 * 1024 //1M bytes
 const MAX_WORKERS_FILE = 3;
 const MAX_WORKERS = 5;
 
-function FastUpload({ lang = 'en' }) {
+function FastUpload({ lang = 'en' , uploadServer = 'http://localhost:3000'}) {
     const [t, setT] = useState(() => (key: string) => key);
     const [progress, setProgress] = useState(0);
     const progressRef = useRef(0);
@@ -84,30 +84,22 @@ function FastUpload({ lang = 'en' }) {
                     console.log('Creating new worker...');
                    
                     // const workerUrl = new URL('./UploadWorker.js', import.meta.url);
-                    const workerUrl = new URL('/dist/UploadWorker.js', import.meta.url);
-                    console.log('Attempting to load worker from:', workerUrl.toString());
+                    // console.log('Attempting to load worker from:', workerUrl.toString());
         
                      // 先检查文件是否存在，等待结果
-                    await fetch(workerUrl.toString())
-                    .then(response => {
-                        console.log('Worker file response:', response.status, response.statusText, response);
-                        if (!response.ok) {
-                            throw new Error(`Worker file not found: ${response.status}`);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Worker file fetch error:', error);
-                        throw error; // 重新抛出错误
-                    });
-
-                    const worker = new UploadWorker();
-
-                    // const worker = new Worker(workerUrl, { 
-                    //     type: 'classic',
-                    //     credentials: 'same-origin'
+                    // await fetch(workerUrl.toString())
+                    // .then(response => {
+                    //     console.log('Worker file response:', response.status, response.statusText, response);
+                    //     if (!response.ok) {
+                    //         throw new Error(`Worker file not found: ${response.status}`);
+                    //     }
+                    // })
+                    // .catch(error => {
+                    //     console.error('Worker file fetch error:', error);
+                    //     throw error; // 重新抛出错误
                     // });
 
-
+                    const worker = new UploadWorker();
 
                     // 只有在文件存在时才创建 Worker
                     // const worker = new Worker(workerUrl, {
@@ -179,6 +171,14 @@ function FastUpload({ lang = 'en' }) {
                     
                     // 测试 worker 是否能正常工作
                     worker.postMessage({ action: 'test' });
+                    // 初始化时发送配置
+                    worker.postMessage({ 
+                        action: 'init', 
+                        config: { 
+                            uploadServer,
+                            userId: getUserId()
+                        } 
+                    });
                     
                 } catch (error) {
                     console.error('Error creating worker:', error);
@@ -267,8 +267,8 @@ function FastUpload({ lang = 'en' }) {
                 workerRef.current.postMessage({
                     action: 'upload', 
                     data: uploadFile, 
-                    chunkSize: CHUNK_SIZE, 
-                    userId: getUserId()
+                    chunkSize: CHUNK_SIZE
+                    // userId: getUserId()
                 });
             } catch (error) {
                 console.error('Error posting message to worker:', error);
