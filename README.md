@@ -13,10 +13,9 @@
 - 支持连续上传
 - 多语言支持，目前支持英文、中文、日文
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## 如何安装使用
+# 如何安装使用
+## 前端组件安装
 使用npm安装
 ```bash
 npm install @maxmax117/fastupload
@@ -30,33 +29,84 @@ yarn add @maxmax117/fastupload
 ```html
 <FastUpload lang='en'/>
 ```
-## 后端服务对接
-文件上传需要有后端服务对接，FastUpload组件是一个前端组件，本身不提供后端服务，需要你自己实现。
-为了简化大家的工作，我以不同后端开发语言实现了几套后端服务(bunjs、java、go)，如果你需要的话，请联系并说明你需要哪种后端。
+## 后端上传服务器对接
+文件上传需要有后端服务支持，FastUpload组件是一个前端组件，本身不提供后端服务，需要你自己实现。
+为了简化大家的工作，我以不同后端开发语言实现了几套后端服务(bunjs、java、go)，如果你需要的话，可以联系我<a href="mailto:intellibiz.sh@gmail.com">intellibiz.sh@gmail.com</a>
 
 如果你需要自己对接后端服务，可以参考以下步骤：
 
-### 后端接口
+### 实现后端接口
 
-- Configure the top-level `parserOptions` property like this:
+- 上传服务器必须实现下面两个接口:
 
 ```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+1. 实现上传握手接口
+'/upload/shakehands'
+
+    接入参数：
+    const json = {
+        fileHash: string,
+        fileSize: number,
+        fileName: string,
+        fileId: string
+    };
+    返回参数：
+    {
+      success: boolean,
+      message: string,
+      type: 'new',
+      fileId: string,
+      chunkSize: number,
+      status: “PENDING”,
+        uploadProgress: {
+                          totalChunks: number,
+                          uploadedChunks: number,
+                          percentage: number
+                      }
+      };
+    
+2. 实现分片上传接口
+'/upload/chunk'
+    接入参数
+    {
+      chunk: Blob,
+      chunkIndex: number,
+      fileId: string,
+      clientFileId: string,
+      checksum: string
+    }
+    
+    返回参数：
+    {
+        success: boolean,
+        message: string,
+        chunkIndex: number,
+        fileId: string,
+        size: number,
+        isComplete: boolean,
+        uploadProgress: {
+                            totalChunks: number,
+                            uploadedChunks: number
+                        }                
+    }
+
+
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+### 指定上传服务器
 
 
-## Installation
+```js
+  <FastUpload uploadServer='[your server url]' lang='en'/>
+```
+
+### 切换语言
+
+```js
+  <FastUpload lang='en'/> // 默认英文 
+  <FastUpload lang='zh'/> // 中文
+  <FastUpload lang='ja'/> // 日文
+```
+
 
 
