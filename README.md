@@ -1,12 +1,13 @@
 
 # FastUpload
 
-一个基于web worker多线程技术的可实现异步上传的React组件
+一个基于web worker多线程技术的可实现任意大小文件异步上传的React组件
 
 ![FastUpload](./public/images/fastupload16.37.16.png)
 
 # 特性
 - 多线程上传，上传文件时不会阻塞UI页面，用户随时可以停止
+- 支持超大文件上传
 - 上传实时进度显示
 - 支持断点续传
 - 支持秒传功能
