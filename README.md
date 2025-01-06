@@ -1,64 +1,67 @@
-
 # FastUpload
 
-一个基于web worker多线程技术的可实现任意大小文件异步上传的React组件
+[English](README.md) | [中文](README.zh.md) | [日本語](README.ja.md)
 
-![FastUpload](./public/images/fastupload16.37.16.png)
+A React component for asynchronous upload of files of any size based on web worker multi-threading technology
 
-# 特性
-- 多线程上传，上传文件时不会阻塞UI页面，用户随时可以暂停或者取消
-- 支持超大文件上传
-- 上传实时进度显示
-- 支持断点续传
-- 支持秒传功能
-- 支持连续上传
-- 多语言支持，目前支持英文、中文、日文
+<img src="./public/images/3.gif" width="500" alt="FastUpload">
+<img src="./public/images/2.gif" width="530" alt="FastUpload">
+<img src="./public/images/1.gif" width="500" alt="FastUpload">
 
+# Features
+- Multi-threaded upload, UI page will not be blocked during file upload, users can pause or cancel at any time
+- Support for large file uploads
+- Real-time upload progress display
+- Support for breakpoint resume
+- Support for instant upload
+- Support for continuous upload
+- Multi-language support (currently supports English, Chinese, Japanese)
 
-# 如何安装使用
-## 前端组件安装
-使用npm安装
+# Installation and Usage
+## Frontend Component Installation
+Using npm
 ```bash
 npm install @maxmax117/fastupload
 ```
-使用yarn安装
+Using yarn
 ```bash
 yarn add @maxmax117/fastupload
 ```
-然后在你的react项目合适的位置加入
+Then add to your React project where appropriate
 
 ```html
 <FastUpload lang='en'/>
 ```
-## 后端上传服务器对接
-文件上传需要有后端服务支持，FastUpload组件是一个前端组件，本身不提供后端服务，需要你自己实现，你可以采用自己喜欢的语言和框架实现, Java、Go、Node.js、Bun.js、Python、PHP等。
-为了简化大家的工作，如果你需要的话，也可以联系我<a href="mailto:intellibiz.sh@gmail.com">intellibiz.sh@gmail.com</a>，我以不同后端开发语言实现了几套后端服务(bunjs、java、go)，可以作为独立的微服务开箱即用。
 
-如果你需要自己对接后端服务，可以参考以下步骤：
+## Backend Upload Server Integration
+File upload requires backend service support. The FastUpload component is a frontend component and does not provide backend services. You need to implement it yourself using your preferred language and framework (Java, Go, Node.js, Bun.js, Python, PHP, etc.).
+To simplify your work, if needed, you can also contact me at <a href="mailto:intellibiz.sh@gmail.com">intellibiz.sh@gmail.com</a>. I have implemented several backend services in different languages (bunjs, java, go) that can be used as standalone microservices out of the box.
 
-### 实现后端接口
+If you need to integrate with your own backend service, you can refer to the following steps:
 
-- 上传服务器必须实现下面两个接口:
+### Implement Backend APIs
+
+- The upload server must implement the following two interfaces:
 
 ```js
-1. 实现上传握手接口
+1. Implement handshake interface
 '/upload/shakehands'
 
-    接入参数：
+    Input parameters：
     const json = {
         fileHash: string,
         fileSize: number,
         fileName: string,
         fileId: string
     };
-    返回参数：
+    Return parameters：
     {
       success: boolean,
       message: string,
       type: 'new',
       fileId: string,
       chunkSize: number,
-      status: “PENDING”,
+      status: "PENDING",
         uploadProgress: {
                           totalChunks: number,
                           uploadedChunks: number,
@@ -66,9 +69,9 @@ yarn add @maxmax117/fastupload
                       }
       };
     
-2. 实现分片上传接口
+2. Implement chunk upload interface
 '/upload/chunk'
-    接入参数
+    Input parameters
     {
       chunk: Blob,
       chunkIndex: number,
@@ -77,7 +80,7 @@ yarn add @maxmax117/fastupload
       checksum: string
     }
     
-    返回参数：
+    Return parameters：
     {
         success: boolean,
         message: string,
@@ -90,23 +93,20 @@ yarn add @maxmax117/fastupload
                             uploadedChunks: number
                         }                
     }
-
-
 ```
 
-### 指定上传服务器
-
+### Specify Upload Server
 
 ```js
   <FastUpload uploadServer='[your server url]' lang='en'/>
 ```
 
-### 切换语言
+### Switch Language
 
 ```js
-  <FastUpload lang='en'/> // 默认英文 
-  <FastUpload lang='zh'/> // 中文
-  <FastUpload lang='ja'/> // 日文
+  <FastUpload lang='en'/> // English by default
+  <FastUpload lang='zh'/> // Chinese
+  <FastUpload lang='ja'/> // Japanese
 ```
 
 
