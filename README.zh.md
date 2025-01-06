@@ -5,7 +5,7 @@
 一个基于web worker多线程技术的可实现任意大小文件异步上传的React组件
 
 <img src="./public/images/3.gif" width="500" alt="FastUpload">
-<img src="./public/images/2.gif" width="530" alt="FastUpload">
+<img src="./public/images/2.gif" width="530" style="margin-left: -15px"  alt="FastUpload">
 <img src="./public/images/1.gif" width="500" alt="FastUpload">
 
 # 特性

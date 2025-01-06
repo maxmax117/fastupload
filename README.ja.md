@@ -5,7 +5,7 @@
 Web Workerのマルチスレッド技術を基にした、任意のサイズのファイルを非同期アップロードできるReactコンポーネント
 
 <img src="./public/images/3.gif" width="500" alt="FastUpload">
-<img src="./public/images/2.gif" width="530" alt="FastUpload">
+<img src="./public/images/2.gif" width="530" style="margin-left: -15px"  alt="FastUpload">
 <img src="./public/images/1.gif" width="500" alt="FastUpload">
 
 # 特徴

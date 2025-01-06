@@ -5,7 +5,7 @@
 A React component for asynchronous upload of files of any size based on web worker multi-threading technology
 
 <img src="./public/images/3.gif" width="500" alt="FastUpload">
-<img src="./public/images/2.gif" width="530" alt="FastUpload">
+<img src="./public/images/2.gif" width="530" style="margin-left: -15px"  alt="FastUpload">
 <img src="./public/images/1.gif" width="500" alt="FastUpload">
 
 # Features
